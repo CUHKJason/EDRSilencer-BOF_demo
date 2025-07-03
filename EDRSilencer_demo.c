@@ -170,10 +170,10 @@ void BlockIPDemo() {
 
     // add sublayer
     fwpFilterSubLayer1.displayData.name = L"TestFilterSublayer_highest";
-	fwpFilterSubLayer1.displayData.description = L"Test filter sublayer (highest)";
-	fwpFilterSubLayer1.weight = 0xFFFF;
+    fwpFilterSubLayer1.displayData.description = L"Test filter sublayer (highest)";
+    fwpFilterSubLayer1.weight = 0xFFFF;
     fwpFilterSubLayer1.flags = FWPM_SUBLAYER_FLAG_PERSISTENT;
-	fwpFilterSubLayer1.subLayerKey = SubLayerGuid1;
+    fwpFilterSubLayer1.subLayerKey = SubLayerGuid1;
 
     msg("Adding filter sublayer.\n");
 
