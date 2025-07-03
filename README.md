@@ -1,21 +1,23 @@
 # EDRSilencer BOF
 
-This is a port of the EDRSilencer tool (https://github.com/netero1010/EDRSilencer) to BOF format. It is designed to block outbound traffic for various EDR processes using Windows Filtering Platform (WFP) APIs.
+This is a port of the EDRSilencer BOF (https://github.com/AonCyberLabs/EDRSilencer-BOF), to show the demo code snippet of creating custom sublayer (Line 160-184) and add WFP filter with different condition (e.g., block remote IP / block appID) (Line 196-258).
 
 ## Usage
 ```
-Usage: edrsilencer <blockedr/block/unblockall/unblock> [<program path>|<filter id>]
+Usage: edrsilencer <blockedr/blockip/block/unblockall/unblock> [<program path>|<filter id>]
+- Demo code snippet to create custom sublayer and add WFP filter to block remote IPv4 142[.]250[.]71[.]174:  
+  EDRSilencer blockip
 - Add WFP filters to block the IPv4 and IPv6 outbound traffic of all detected EDR processes:
-  edrsilencer blockedr
+  EDRSilencer blockedr
 
 - Add WFP filters to block the IPv4 and IPv6 outbound traffic of a specific process (full path is required):
-  edrsilencer block "C:\Windows\System32\curl.exe"
+  EDRSilencer block "C:\Windows\System32\curl.exe"
 
 - Remove all WFP filters applied by this tool:
-  edrsilencer unblockall
+  EDRSilencer unblockall
 
 - Remove a specific WFP filter based on filter id:
-  edrsilencer unblock <filter id>
+  EDRSilencer unblock <filter id>
 ```
 
 ## Compile
@@ -28,8 +30,7 @@ Compile standalone .exe:
 
 ## Credits
 
+- https://github.com/AonCyberLabs/EDRSilencer-BOF
 - https://github.com/netero1010/EDRSilencer
 - https://www.mdsec.co.uk/2023/09/nighthawk-0-2-6-three-wise-monkeys/
 
-## Copyright
-Copyright 2024 Aon plc

