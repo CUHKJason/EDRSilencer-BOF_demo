@@ -1,12 +1,13 @@
 # EDRSilencer BOF
 
-This is a port of the EDRSilencer BOF (https://github.com/AonCyberLabs/EDRSilencer-BOF), to show the demo code snippet of creating custom sublayer (Line 160-184) and add WFP filter with different condition (e.g., block remote IP / block appID) (Line 196-258).
+This is a fork of the EDRSilencer BOF (https://github.com/AonCyberLabs/EDRSilencer-BOF), to show the demo code snippet of creating custom sublayer (Line 160-184) and add WFP filter with different condition (e.g., block remote IP / block appID) (Line 196-258).
 
 ## Usage
 ```
 Usage: edrsilencer <blockedr/blockip/block/unblockall/unblock> [<program path>|<filter id>]
 - Demo code snippet to create custom sublayer and add WFP filter to block remote IPv4 142[.]250[.]71[.]174:  
   EDRSilencer blockip
+
 - Add WFP filters to block the IPv4 and IPv6 outbound traffic of all detected EDR processes:
   EDRSilencer blockedr
 
